@@ -5,9 +5,19 @@ import (
 	"fmt"
 )
 
+const (
+	flag_status = "internal_status"
+	flag_error = "internal_error"
+	flag_status_rollback = "rollback"
+)
+
 type Params map[string]string
 
 type Work func(p Params) error
+
+var WorkPassThrough Work = func(p Params)error{
+	return nil
+}
 
 type Task struct {
 	Name       string
@@ -25,24 +35,30 @@ func NewTask(name string, forward, backward Work) *Task {
 	return &t
 }
 
-func (t *Task) Then(t2 *Task) *Task {
-	first := t
+func (t *Task) last () *Task {
 	for t.NextTask != nil {
 		t = t.NextTask
 	}
+	return t
+}
+
+func (t *Task) Then(t2 *Task) *Task {
+	first := t
+	t = t.last()
 	t.NextTask = t2
 	t2.PrevTask = t
 	return first
 }
 
 func (t *Task) handle(p Params) (err error) {
-	rollback := p["error"] != ""
+	rollback := p[flag_status] == flag_status_rollback
 	if !rollback {
 		fmt.Printf("START task '%s'\n", t.Name)
 		err = t.Forward(p)
 		if err != nil {
 			rollback = true
-			p["error"] = err.Error()
+			p[flag_status] = flag_status_rollback
+			p[flag_error] = err.Error()
 		}
 		t.PrintStatus(false, err)
 	}
@@ -53,14 +69,23 @@ func (t *Task) handle(p Params) (err error) {
 	return
 }
 
+func(t *Task) Rollback(p Params)(err error) {
+	p[flag_status] = flag_status_rollback
+	return t.last().Exec(p)
+}
+
 func (t *Task) Exec(p Params) (err error) {
 	err = t.handle(p)
-	rollback := p["error"] != ""
+	rollback := p[flag_status] == flag_status_rollback
 	if rollback {
 		if t.PrevTask != nil {
 			return t.PrevTask.Exec(p)
 		} else {
-			return errors.New(p["error"])
+			if p[flag_error] == "" {
+				return nil
+			} else {
+				return errors.New(p[flag_error])
+			}
 		}
 	} else if t.NextTask != nil {
 		return t.NextTask.Exec(p)
