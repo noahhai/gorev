@@ -63,6 +63,7 @@ func (t *Task) handle(p Params) (err error) {
 		t.PrintStatus(false, err)
 	}
 	if rollback {
+		fmt.Printf("ROLLBACK - START '%s'\n", t.Name)
 		rerr := t.Backward(p)
 		t.PrintStatus(true, rerr)
 	}
