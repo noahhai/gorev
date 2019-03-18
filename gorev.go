@@ -38,6 +38,7 @@ func (t *Task) Then(t2 *Task) *Task {
 func (t *Task) handle(p Params) (err error) {
 	rollback := p["error"] != ""
 	if !rollback {
+		fmt.Printf("START task '%s'\n", t.Name)
 		err = t.Forward(p)
 		if err != nil {
 			rollback = true
@@ -77,7 +78,7 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 	} else {
 		msg += "FAIL"
 	}
-	msg += " task '" + t.Name + "'."
+	msg += " task '" + t.Name + "'"
 	if err != nil {
 		if !rollback {
 			msg += "\nBEGINNING ROLLBACK"
