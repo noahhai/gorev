@@ -1,4 +1,4 @@
-package main
+package gorev
 
 import (
 	"errors"
@@ -80,7 +80,7 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 	msg += " task '" + t.Name + "'."
 	if err != nil {
 		if !rollback {
-			msg += " Beginning rollback"
+			msg += "\nBEGINNING ROLLBACK"
 		}
 		msg += "\n\terror: " + err.Error()
 	}
