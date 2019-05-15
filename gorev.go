@@ -11,7 +11,7 @@ const (
 	flag_status_rollback = "rollback"
 )
 
-type Params map[string]string
+type Params map[string]interface{}
 
 type Work func(p Params) error
 
@@ -82,10 +82,10 @@ func (t *Task) Exec(p Params) (err error) {
 		if t.PrevTask != nil {
 			return t.PrevTask.Exec(p)
 		} else {
-			if p[flag_error] == "" {
+			if p[flag_error] == nil {
 				return nil
 			} else {
-				return errors.New(p[flag_error])
+				return errors.New(p[flag_error].(string))
 			}
 		}
 	} else if t.NextTask != nil {
