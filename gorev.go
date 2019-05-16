@@ -63,7 +63,7 @@ func (t *Task) handle(p Params) (err error) {
 		t.PrintStatus(false, err)
 	}
 	if rollback {
-		fmt.Printf("ROLLBACK - START '%s'\n", t.Name)
+		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
 		rerr := t.Backward(p)
 		t.PrintStatus(true, rerr)
 	}
@@ -109,7 +109,7 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 		if !rollback {
 			msg += "\nBEGINNING ROLLBACK"
 		}
-		msg += "\n\terror: " + err.Error()
+		msg += "\n\tERROR: " + err.Error()
 	}
 	fmt.Println(msg)
 }
