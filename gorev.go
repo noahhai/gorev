@@ -203,11 +203,14 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 		}
 	}
 
+
 	// Xor
 	var found []string
 	var missing []string
+	var errs []string
 	for _, c := range condition.Xor {
 		if err := ValidateParamConditions(params, c); err != nil {
+			errs = append(errs, err.Error())
 			missing = append(missing, c.Describe())
 		} else {
 			found = append(found, c.Describe())
@@ -217,7 +220,7 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 		}
 	}
 	if len(condition.Xor) > 0 && len(found) < 1 {
-		return fmt.Errorf("invalid/missing XOR param(s): %s", strings.Join(missing, ", "))
+		return fmt.Errorf("invalid/missing XOR param(s): %s\n\tREASON:\n\t%s\n", strings.Join(missing, ", "), strings.Join(errs, "\n\t"))
 	}
 
 	// Or
@@ -225,11 +228,13 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 	for _, c := range condition.Or {
 		if err := ValidateParamConditions(params, c); err == nil {
 			return nil
+		} else {
+			errs = append(errs, err.Error())
 		}
 		missing = append(missing, c.Describe())
 	}
 	if len(condition.Or) > 1 {
-		return fmt.Errorf("invalid/missing OR param(s): %s", strings.Join(missing, ", "))
+		return fmt.Errorf("invalid/missing OR param(s): %s\n\tREASON:\n\t%s\n", strings.Join(missing, ", "), strings.Join(errs, "\n\t"))
 	}
 	return nil
 }
