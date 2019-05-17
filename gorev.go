@@ -3,6 +3,7 @@ package gorev
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -15,12 +16,21 @@ type Params map[string]interface{}
 
 type Work func(p Params) error
 
-var WorkPassThrough Work = func(p Params)error{
+type Condition struct {
+	And   []Condition
+	Or    []Condition
+	Xor   []Condition
+	Key   string
+	Value interface{}
+}
+
+var WorkPassthrough Work = func(p Params)error{
 	return nil
 }
 
 type Task struct {
 	Name       string
+	Condition
 	NextTask   *Task
 	PrevTask   *Task
 	Forward    Work
@@ -54,7 +64,10 @@ func (t *Task) handle(p Params) (err error) {
 	rollback := p[flag_status] == flag_status_rollback
 	if !rollback {
 		fmt.Printf("START task '%s'\n", t.Name)
-		err = t.Forward(p)
+		err = validateParamConditions(p, t.Condition)
+		if err == nil {
+			err = t.Forward(p)
+		}
 		if err != nil {
 			rollback = true
 			p[flag_status] = flag_status_rollback
@@ -114,3 +127,50 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 	fmt.Println(msg)
 }
 
+
+func validateParamConditions(params map[string]interface{}, condition Condition) error {
+	if condition.Key != "" {
+		if v, ok := params[condition.Key]; !ok || v == nil {
+			return fmt.Errorf("missing param '%s'", condition.Key)
+		} else if condition.Value != nil && condition.Value != v {
+			return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
+		}
+	}
+
+	// And
+	for _, c := range condition.And {
+		if err := validateParamConditions(params, c); err != nil {
+			return err
+		}
+	}
+
+	// Xor
+	var found []string
+	var missing []string
+	for _, c := range condition.Xor {
+		if err := validateParamConditions(params, c); err != nil {
+			missing = append(missing, c.Key)
+		} else {
+			found = append(found, c.Key)
+		}
+		if len(found) > 1 {
+			return fmt.Errorf("2+ XOR param(s): %s", strings.Join(found, ", "))
+		}
+	}
+	if len(condition.Xor) > 1 && len(found) < 1 {
+		return fmt.Errorf("invalid/missing XOR param(s): %s", strings.Join(missing, ", "))
+	}
+
+	// Or
+	missing = []string{}
+	for _, c := range condition.Or {
+		if err := validateParamConditions(params, c); err == nil {
+			return nil
+		}
+		missing = append(missing, c.Key)
+	}
+	if len(condition.Or) > 1 {
+		return fmt.Errorf("invalid/missing OR param(s): %s", strings.Join(missing, ", "))
+	}
+	return nil
+}

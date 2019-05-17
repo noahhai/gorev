@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExec(t *testing.T) {
@@ -32,5 +33,166 @@ func TestRollback(t *testing.T) {
 	err := tasks.Rollback(p)
 	if err != nil {
 		t.Error("unexpected: rollback error was not not nil", err)
+	}
+}
+
+ var validationCases = []struct{
+ 	Name string
+	Success bool
+	Condition
+	Params
+}{
+	 {
+	 	Name: "Simple",
+	 	Success: true,
+	 	Params: Params{
+	 		"A":"B",
+		},
+		 Condition: Condition{
+		 	Key: "A",
+		 },
+	 },
+	 {
+	 	Name: "SimpleFail",
+	 	Success: false,
+	 	Params: Params{
+	 		"A":"B",
+		},
+		 Condition: Condition{
+		 	Key: "C",
+		 },
+	 },
+	 {
+	 	Name: "And",
+	 	Success: true,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	And: []Condition{
+		 		{
+		 			Key:"A",
+		 			Value:"B",
+				},
+				{
+					Key:"C",
+				},
+			},
+		 },
+	 },
+	 {
+	 	Name: "AndFail",
+	 	Success: false,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	And: []Condition{
+		 		{
+		 			Key:"A",
+		 			Value:"B",
+				},
+				{
+					Key:"C",
+					Value:"E",
+				},
+			},
+		 },
+	 },
+	 {
+	 	Name: "Or",
+	 	Success: true,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	Or: []Condition{
+		 		{
+		 			Key:"A",
+		 			Value:"B",
+				},
+				{
+					Key:"F",
+					Value:"G",
+				},
+			},
+		 },
+	 },
+	 {
+	 	Name: "OrFail",
+	 	Success: false,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	Or: []Condition{
+		 		{
+		 			Key:"A",
+		 			Value:"N",
+				},
+				{
+					Key:"F",
+					Value:"G",
+				},
+			},
+		 },
+	 },
+	 {
+	 	Name: "Xor",
+	 	Success: true,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	Xor: []Condition{
+		 		{
+		 			Key:"A",
+				},
+				{
+					Key:"F",
+					Value:"G",
+				},
+			},
+		 },
+	 },
+	 {
+	 	Name: "XorFail",
+	 	Success: false,
+	 	Params: Params{
+	 		"A":"B",
+	 		"C":"D",
+		},
+		 Condition: Condition{
+		 	Xor: []Condition{
+		 		{
+		 			Key:"A",
+		 			Value:"B",
+				},
+				{
+					Key:"C",
+					Value:"D",
+				},
+			},
+		 },
+	 },
+ }
+
+func TestParamValidation(t *testing.T) {
+	for _, c := range validationCases {
+		t.Run(c.Name, func(t *testing.T){
+			task := Task{
+				Name:     c.Name,
+				Forward:  WorkPassthrough,
+				Backward: WorkPassthrough,
+				Condition: c.Condition,
+			}
+			err := task.Exec(c.Params)
+			assert.Equal(t, c.Success, err == nil, err)
+		})
 	}
 }
