@@ -151,11 +151,11 @@ func (c *Condition) Describe() (n string){
 	first := true
 	for _, cond := range c.And {
 		if !first {
-			n += " &"
+			n += " &&"
 		} else {
 			first = false
 		}
-		n += cond.Describe()
+		n += " " + cond.Describe()
 	}
 	for _, cond := range c.Xor {
 		if !first {
@@ -163,7 +163,7 @@ func (c *Condition) Describe() (n string){
 		} else {
 			first = false
 		}
-		n += cond.Describe()
+		n += " " + cond.Describe()
 	}
 	for _, cond := range c.Or {
 		if !first {
@@ -171,7 +171,7 @@ func (c *Condition) Describe() (n string){
 		} else {
 			first = false
 		}
-		n += cond.Describe()
+		n += " " + cond.Describe()
 	}
 
 	n += " )"
