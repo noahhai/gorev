@@ -69,10 +69,16 @@ func (t *Task) handle(p Params) (err error) {
 	rollback := p[flag_status] == flag_status_rollback
 	if !rollback {
 		fmt.Printf("START task '%s'\n", t.Name)
+
 		err = ValidateParamConditions(p, t.Condition)
-		if err == nil {
-			err = t.Forward(p)
+		if err != nil {
+			fmt.Printf("VALIDATION FAIL:\n\tERROR: %v\n", err)
+			p[flag_status] = flag_status_rollback
+			p[flag_error] = err.Error()
+			return
 		}
+
+		err = t.Forward(p)
 		if err != nil {
 			rollback = true
 			p[flag_status] = flag_status_rollback
@@ -134,10 +140,18 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 
 func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
 	if condition.Key != "" {
-		if v, ok := params[condition.Key]; !ok || v == nil {
+		v, ok := params[condition.Key]
+		if !ok || v == nil {
 			return fmt.Errorf("missing param '%s'", condition.Key)
-		} else if condition.Value != nil && condition.Value != v {
+		}
+		if condition.Value != nil && condition.Value != v {
 			return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
+		}
+		switch t := v.(type) {
+		case string:
+			if t == "" {
+				return fmt.Errorf("empty/missing param '%s'", condition.Key)
+			}
 		}
 	}
 
