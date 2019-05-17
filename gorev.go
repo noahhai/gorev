@@ -14,6 +14,13 @@ const (
 
 type Params map[string]interface{}
 
+func (p Params) StringOrDefault(key string) string{
+	if v, ok := p[key]; ok && v != nil {
+		return v.(string)
+	}
+	return ""
+}
+
 type Work func(p Params) error
 
 var WorkPassthrough Work = func(p Params) error {
