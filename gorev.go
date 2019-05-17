@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	flag_status = "internal_status"
-	flag_error = "internal_error"
+	flag_status          = "internal_status"
+	flag_error           = "internal_error"
 	flag_status_rollback = "rollback"
 )
 
@@ -24,17 +24,17 @@ type Condition struct {
 	Value interface{}
 }
 
-var WorkPassthrough Work = func(p Params)error{
+var WorkPassthrough Work = func(p Params) error {
 	return nil
 }
 
 type Task struct {
-	Name       string
-	Condition
-	NextTask   *Task
-	PrevTask   *Task
-	Forward    Work
-	Backward   Work
+	Name      string
+	Condition Condition
+	NextTask  *Task
+	PrevTask  *Task
+	Forward   Work
+	Backward  Work
 }
 
 func NewTask(name string, forward, backward Work) *Task {
@@ -50,7 +50,7 @@ func (t *Task) WithCondition(c Condition) *Task {
 	return t
 }
 
-func (t *Task) last () *Task {
+func (t *Task) last() *Task {
 	for t.NextTask != nil {
 		t = t.NextTask
 	}
@@ -88,7 +88,7 @@ func (t *Task) handle(p Params) (err error) {
 	return
 }
 
-func(t *Task) Rollback(p Params)(err error) {
+func (t *Task) Rollback(p Params) (err error) {
 	p[flag_status] = flag_status_rollback
 	return t.last().Exec(p)
 }
@@ -108,7 +108,7 @@ func (t *Task) Exec(p Params) (err error) {
 		}
 	} else if t.NextTask != nil {
 		return t.NextTask.Exec(p)
-	} 
+	}
 	return
 }
 
@@ -131,7 +131,6 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 	}
 	fmt.Println(msg)
 }
-
 
 func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
 	if condition.Key != "" {
