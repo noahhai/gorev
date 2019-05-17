@@ -64,7 +64,7 @@ func (t *Task) handle(p Params) (err error) {
 	rollback := p[flag_status] == flag_status_rollback
 	if !rollback {
 		fmt.Printf("START task '%s'\n", t.Name)
-		err = validateParamConditions(p, t.Condition)
+		err = ValidateParamConditions(p, t.Condition)
 		if err == nil {
 			err = t.Forward(p)
 		}
@@ -128,7 +128,7 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 }
 
 
-func validateParamConditions(params map[string]interface{}, condition Condition) error {
+func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
 	if condition.Key != "" {
 		if v, ok := params[condition.Key]; !ok || v == nil {
 			return fmt.Errorf("missing param '%s'", condition.Key)
@@ -139,7 +139,7 @@ func validateParamConditions(params map[string]interface{}, condition Condition)
 
 	// And
 	for _, c := range condition.And {
-		if err := validateParamConditions(params, c); err != nil {
+		if err := ValidateParamConditions(params, c); err != nil {
 			return err
 		}
 	}
@@ -148,7 +148,7 @@ func validateParamConditions(params map[string]interface{}, condition Condition)
 	var found []string
 	var missing []string
 	for _, c := range condition.Xor {
-		if err := validateParamConditions(params, c); err != nil {
+		if err := ValidateParamConditions(params, c); err != nil {
 			missing = append(missing, c.Key)
 		} else {
 			found = append(found, c.Key)
@@ -164,7 +164,7 @@ func validateParamConditions(params map[string]interface{}, condition Condition)
 	// Or
 	missing = []string{}
 	for _, c := range condition.Or {
-		if err := validateParamConditions(params, c); err == nil {
+		if err := ValidateParamConditions(params, c); err == nil {
 			return nil
 		}
 		missing = append(missing, c.Key)
