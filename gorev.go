@@ -45,6 +45,11 @@ func NewTask(name string, forward, backward Work) *Task {
 	return &t
 }
 
+func (t *Task) WithCondition(c Condition) *Task {
+	t.Condition = c
+	return t
+}
+
 func (t *Task) last () *Task {
 	for t.NextTask != nil {
 		t = t.NextTask
