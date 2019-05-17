@@ -16,14 +16,6 @@ type Params map[string]interface{}
 
 type Work func(p Params) error
 
-type Condition struct {
-	And   []Condition
-	Or    []Condition
-	Xor   []Condition
-	Key   string
-	Value interface{}
-}
-
 var WorkPassthrough Work = func(p Params) error {
 	return nil
 }
@@ -138,11 +130,60 @@ func (t *Task) PrintStatus(rollback bool, err error) {
 	fmt.Println(msg)
 }
 
+
+type Condition struct {
+	And   []Condition
+	Or    []Condition
+	Xor   []Condition
+	Key   string
+	Value interface{}
+}
+
+func (c *Condition) Describe() (n string){
+	if c.Key != "" {
+		n += c.Key
+		if c.Value != nil {
+			n += fmt.Sprintf("='%v'", c.Value)
+		}
+		return
+	}
+	n += " ("
+	first := true
+	for _, cond := range c.And {
+		if !first {
+			n += " &"
+		} else {
+			first = false
+		}
+		n += cond.Describe()
+	}
+	for _, cond := range c.Xor {
+		if !first {
+			n += " ⊕"
+		} else {
+			first = false
+		}
+		n += cond.Describe()
+	}
+	for _, cond := range c.Or {
+		if !first {
+			n += " ||"
+		} else {
+			first = false
+		}
+		n += cond.Describe()
+	}
+
+	n += " )"
+	return
+}
+
+
 func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
 	if condition.Key != "" {
 		v, ok := params[condition.Key]
 		if !ok || v == nil {
-			return fmt.Errorf("missing param '%s'", condition.Key)
+			return fmt.Errorf("missing param: %s", condition.Key)
 		}
 		if condition.Value != nil && condition.Value != v {
 			return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
@@ -167,15 +208,15 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 	var missing []string
 	for _, c := range condition.Xor {
 		if err := ValidateParamConditions(params, c); err != nil {
-			missing = append(missing, c.Key)
+			missing = append(missing, c.Describe())
 		} else {
-			found = append(found, c.Key)
+			found = append(found, c.Describe())
 		}
 		if len(found) > 1 {
 			return fmt.Errorf("2+ XOR param(s): %s", strings.Join(found, ", "))
 		}
 	}
-	if len(condition.Xor) > 1 && len(found) < 1 {
+	if len(condition.Xor) > 0 && len(found) < 1 {
 		return fmt.Errorf("invalid/missing XOR param(s): %s", strings.Join(missing, ", "))
 	}
 
@@ -185,7 +226,7 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 		if err := ValidateParamConditions(params, c); err == nil {
 			return nil
 		}
-		missing = append(missing, c.Key)
+		missing = append(missing, c.Describe())
 	}
 	if len(condition.Or) > 1 {
 		return fmt.Errorf("invalid/missing OR param(s): %s", strings.Join(missing, ", "))
