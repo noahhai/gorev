@@ -14,11 +14,20 @@ const (
 
 type Params map[string]interface{}
 
-func (p Params) StringOrDefault(key string) string{
+func (p Params) StringOrEmpty(key string) string{
 	if v, ok := p[key]; ok && v != nil {
 		return v.(string)
 	}
 	return ""
+}
+
+func (p Params) BoolOrDefault(key string, defaultVal bool) bool{
+	if v, ok := p[key]; ok && v != nil {
+		if vBool, okBool := v.(bool); okBool {
+			return vBool
+		}
+	}
+	return defaultVal
 }
 
 type Work func(p Params) error
