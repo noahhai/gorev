@@ -5,12 +5,15 @@ import (
 	"strings"
 )
 
+type Comparison string
+
 type Condition struct {
 	And   []Condition
 	Or    []Condition
 	Xor   []Condition
 	Key   string
 	Value interface{}
+	ValueNotEqual bool
 }
 
 func (c *Condition) Describe() (n string){
@@ -56,18 +59,29 @@ func (c *Condition) Describe() (n string){
 func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
 	if condition.Key != "" {
 		v, ok := params[condition.Key]
-		if !ok || v == nil {
-			return fmt.Errorf("missing param: %s", condition.Key)
-		}
-		if condition.Value != nil && condition.Value != v {
-			return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
-		}
-		switch t := v.(type) {
-		case string:
-			if t == "" {
-				return fmt.Errorf("empty/missing param '%s'", condition.Key)
+		if !condition.ValueNotEqual {
+			if !ok || v == nil {
+				return fmt.Errorf("missing param: %s", condition.Key)
+			}
+			if condition.Value != nil && condition.Value != v {
+				return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
+			}
+			switch t := v.(type) {
+			case string:
+				if t == "" {
+					return fmt.Errorf("empty/missing param '%s'", condition.Key)
+				}
+			}
+		} else {
+			if condition.Value == nil && ok {
+				return fmt.Errorf("parameter '%s' was specified when not expected", condition.Key)
+			} else if condition.Value != nil && ok {
+				if condition.Value == v {
+					return fmt.Errorf("parameter '%s' value '%v' matched '%v' when inequality expected", condition.Key, v, condition.Value)
+				}
 			}
 		}
+
 	}
 
 	// And
