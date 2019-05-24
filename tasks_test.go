@@ -190,6 +190,42 @@ var validationCases = []struct {
 			Key:   "A",
 		},
 	},
+	{
+		Name:    "MatchString",
+		Success: true,
+		Params: Params{
+			"A": "ABA",
+		},
+		Condition: Condition{
+			Key:   "A",
+			Value: "ABA|CBC",
+			Comparison: Match,
+		},
+	},
+	{
+		Name:    "MatchStringFail",
+		Success: false,
+		Params: Params{
+			"A": "ABA",
+		},
+		Condition: Condition{
+			Key:   "A",
+			Value: "ABAC|CBC",
+			Comparison: Match,
+		},
+	},
+	{
+		Name:    "MatchStringBadRegex",
+		Success: false,
+		Params: Params{
+			"A": "ABA",
+		},
+		Condition: Condition{
+			Key:   "A",
+			Value: "ABA[",
+			Comparison: Match,
+		},
+	},
 }
 
 func TestParamValidation(t *testing.T) {

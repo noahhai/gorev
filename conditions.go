@@ -2,10 +2,15 @@ package gorev
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
 type Comparison string
+
+var NotEqual = Comparison("ne")
+var Equal = Comparison("eq")
+var Match = Comparison("re")
 
 type Condition struct {
 	And   []Condition
@@ -13,14 +18,18 @@ type Condition struct {
 	Xor   []Condition
 	Key   string
 	Value interface{}
-	ValueNotEqual bool
+	Comparison
 }
 
 func (c *Condition) Describe() (n string){
 	if c.Key != "" {
 		n += c.Key
 		if c.Value != nil {
-			n += fmt.Sprintf("='%v'", c.Value)
+			comp := c.Comparison
+			if comp == "" {
+				comp = Match
+			}
+			n += fmt.Sprintf(" %s '%v'", comp,  c.Value)
 		}
 		return
 	}
@@ -57,15 +66,29 @@ func (c *Condition) Describe() (n string){
 
 
 func ValidateParamConditions(params map[string]interface{}, condition Condition) error {
+	comp := condition.Comparison
+	if comp == "" {
+		comp = Equal
+	}
 	if condition.Key != "" {
 		v, ok := params[condition.Key]
-		if !condition.ValueNotEqual {
+		if comp != NotEqual {
 			if !ok || v == nil {
 				return fmt.Errorf("missing param: %s", condition.Key)
 			}
-			if condition.Value != nil && condition.Value != v {
-				return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
+			if condition.Value != nil {
+				if comp == Equal && condition.Value != v{
+						return fmt.Errorf("param '%s' did not match expected '%v' (%v)", condition.Key, condition.Value, v)
+				} else if comp == Match{
+					matched, err := regexp.Match(condition.Value.(string), []byte(v.(string)))
+					if err != nil {
+						return fmt.Errorf("invalid regex pattern '%v' for condition '%s'", condition.Value, condition.Key)
+					} else if !matched {
+						return fmt.Errorf("param '%s' did not match expected pattern '%v' (%v)", condition.Key, condition.Value, v)
+					}
+				}
 			}
+
 			switch t := v.(type) {
 			case string:
 				if t == "" {
