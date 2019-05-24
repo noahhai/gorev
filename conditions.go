@@ -10,7 +10,7 @@ type Comparison string
 
 var NotEqual = Comparison("ne")
 var Equal = Comparison("eq")
-var Match = Comparison("re")
+var Match = Comparison("m")
 
 type Condition struct {
 	And   []Condition
@@ -29,7 +29,7 @@ func (c *Condition) Describe() (n string){
 			if comp == "" {
 				comp = Equal
 			}
-			n += fmt.Sprintf(" %s '%v'", comp,  c.Value)
+			n += fmt.Sprintf(" -%s '%v'", comp,  c.Value)
 		}
 		return
 	}
