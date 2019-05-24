@@ -27,7 +27,7 @@ func (c *Condition) Describe() (n string){
 		if c.Value != nil {
 			comp := c.Comparison
 			if comp == "" {
-				comp = Match
+				comp = Equal
 			}
 			n += fmt.Sprintf(" %s '%v'", comp,  c.Value)
 		}
