@@ -31,9 +31,9 @@ func (c *Condition) Describe() (n string){
 				comp = Equal
 			}
 			n += fmt.Sprintf(" -%s '%v'", comp,  c.Value)
-			if c.Reason != "" {
-				n += fmt.Sprintf(" (reason: %s)", c.Reason)
-			}
+		}
+		if c.Reason != "" {
+			n += fmt.Sprintf(" [reason: %s]", c.Reason)
 		}
 		return
 	}
@@ -65,6 +65,9 @@ func (c *Condition) Describe() (n string){
 	}
 
 	n += " )"
+	if c.Reason != "" {
+		n += fmt.Sprintf(" [reason: %s]", c.Reason)
+	}
 	return
 }
 
