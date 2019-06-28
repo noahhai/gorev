@@ -19,7 +19,14 @@ type Condition struct {
 	Key   string
 	Value interface{}
 	Comparison
-	Reason string
+	Motive string
+}
+
+func (c *Condition) motiveFormatted() string{
+	if c.Motive == "" {
+		return ""
+	}
+	return fmt.Sprintf(" [motive: %s]", c.Motive)
 }
 
 func (c *Condition) Describe() (n string){
@@ -32,9 +39,7 @@ func (c *Condition) Describe() (n string){
 			}
 			n += fmt.Sprintf(" -%s '%v'", comp,  c.Value)
 		}
-		if c.Reason != "" {
-			n += fmt.Sprintf(" [reason: %s]", c.Reason)
-		}
+		n += c.motiveFormatted()
 		return
 	}
 	n += " ("
@@ -65,9 +70,7 @@ func (c *Condition) Describe() (n string){
 	}
 
 	n += " )"
-	if c.Reason != "" {
-		n += fmt.Sprintf(" [reason: %s]", c.Reason)
-	}
+	n += c.motiveFormatted()
 	return
 }
 
@@ -134,7 +137,7 @@ func ValidateParamConditions(params map[string]interface{}, condition Condition)
 			found = append(found, c.Describe())
 		}
 		if len(found) > 1 {
-			return fmt.Errorf("2+ XOR param(s): %s", strings.Join(found, ", "))
+			return fmt.Errorf("2+ XOR param(s): %s%s", strings.Join(found, ", "), c.motiveFormatted())
 		}
 	}
 	if len(condition.Xor) > 0 && len(found) < 1 {
