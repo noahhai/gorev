@@ -19,6 +19,7 @@ type Condition struct {
 	Key   string
 	Value interface{}
 	Comparison
+	Reason string
 }
 
 func (c *Condition) Describe() (n string){
@@ -30,6 +31,9 @@ func (c *Condition) Describe() (n string){
 				comp = Equal
 			}
 			n += fmt.Sprintf(" -%s '%v'", comp,  c.Value)
+			if c.Reason != "" {
+				n += fmt.Sprintf(" (reason: %s)", c.Reason)
+			}
 		}
 		return
 	}
