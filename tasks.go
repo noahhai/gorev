@@ -3,24 +3,26 @@ package gorev
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const (
 	flag_status          = "internal_status"
 	flag_error           = "internal_error"
 	flag_status_rollback = "rollback"
+	flag_status_exit     = "exit"
 )
 
 type Params map[string]interface{}
 
-func (p Params) StringOrEmpty(key string) string{
+func (p Params) StringOrEmpty(key string) string {
 	if v, ok := p[key]; ok && v != nil {
 		return v.(string)
 	}
 	return ""
 }
 
-func (p Params) BoolOrDefault(key string, defaultVal bool) bool{
+func (p Params) BoolOrDefault(key string, defaultVal bool) bool {
 	if v, ok := p[key]; ok && v != nil {
 		if vBool, okBool := v.(bool); okBool {
 			return vBool
@@ -74,6 +76,10 @@ func (t *Task) Then(t2 *Task) *Task {
 
 func (t *Task) handle(p Params) (err error) {
 	rollback := p[flag_status] == flag_status_rollback
+	exit := p[flag_status] == flag_status_exit
+	if exit {
+		return nil
+	}
 	if !rollback {
 		fmt.Printf("START task '%s'\n", t.Name)
 
@@ -94,11 +100,26 @@ func (t *Task) handle(p Params) (err error) {
 		t.PrintStatus(false, err)
 	}
 	if rollback {
+		if !t.check("would you like to rollback") {
+			p[flag_status] = flag_status_exit
+			return
+		}
 		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
+
 		rerr := t.Backward(p)
 		t.PrintStatus(true, rerr)
 	}
 	return
+}
+
+func (t *Task) check(msg string) bool {
+	fmt.Printf("%s (y/n)? ", msg)
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil || response == "" || len(response) < 1 {
+		return false
+	}
+	return strings.ToLower(response)[0] == 'y'
 }
 
 func (t *Task) Rollback(p Params) (err error) {
