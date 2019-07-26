@@ -43,7 +43,18 @@ type Task struct {
 	PrevTask  *Task
 	Forward   Work
 	Backward  Work
+	subTasks []*Task
 	resp      string
+}
+
+func Group(tasks ...*Task) *Task {
+	t := Task{
+		subTasks: tasks,
+	}
+	for _, st := range tasks {
+		t.Name = t.Name + " " + st.Name
+	}
+	return &t
 }
 
 func NewTask(name string, forward, backward Work) *Task {
@@ -104,7 +115,17 @@ func (t *Task) handle(p Params) (err error) {
 	}
 	if rollback {
 		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
-		rerr := t.Backward(p)
+		var rerr error
+		if len(t.subTasks) > 0 {
+			for _, sub := range t.subTasks {
+				if e := sub.Backward(p); e != nil {
+					rerr = e
+					break
+				}
+			}
+		} else {
+			rerr = t.Backward(p)
+		}
 		t.PrintStatus(true, rerr)
 		return rerr
 	}
@@ -124,8 +145,16 @@ func (t *Task) handle(p Params) (err error) {
 			p[flag_error] = err
 			return
 		}
-
-		err = t.Forward(p)
+		if len(t.subTasks) > 0 {
+			for _, sub := range t.subTasks {
+				if e := sub.Forward(p); e != nil {
+					err = e
+					break
+				}
+			}
+		} else {
+			err = t.Forward(p)
+		}
 		if err != nil {
 			p[flag_error] = err
 		}
