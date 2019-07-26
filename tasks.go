@@ -114,7 +114,7 @@ func (t *Task) handle(p Params) (err error) {
 		return nil
 	}
 	if rollback {
-		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
+		fmt.Printf("\nROLLBACK - START task '%s'\n", t.Name)
 		var rerr error
 		if len(t.subTasks) > 0 {
 			for _, sub := range t.subTasks {
@@ -137,7 +137,7 @@ func (t *Task) handle(p Params) (err error) {
 		}
 	}
 	if !isErr {
-		fmt.Printf("START task '%s'\n", t.Name)
+		fmt.Printf("\nSTART task '%s'\n", t.Name)
 
 		err = ValidateParamConditions(p, t.Condition)
 		if err != nil {
