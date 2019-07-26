@@ -1,7 +1,6 @@
 package gorev
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -44,6 +43,7 @@ type Task struct {
 	PrevTask  *Task
 	Forward   Work
 	Backward  Work
+	resp      string
 }
 
 func NewTask(name string, forward, backward Work) *Task {
@@ -52,6 +52,21 @@ func NewTask(name string, forward, backward Work) *Task {
 	t.Forward = forward
 	t.Backward = backward
 	return &t
+}
+
+func (t *Task) SetAutoResponse(resp string) *Task {
+	t.resp = resp
+	next := t.NextTask
+	for next != nil {
+		next.resp = resp
+		next = next.NextTask
+	}
+	prev := t.PrevTask
+	for prev != nil {
+		prev.resp = resp
+		prev = prev.NextTask
+	}
+	return t
 }
 
 func (t *Task) WithCondition(c Condition) *Task {
@@ -71,43 +86,53 @@ func (t *Task) Then(t2 *Task) *Task {
 	t = t.last()
 	t.NextTask = t2
 	t2.PrevTask = t
+	if t2.resp == "" && t.resp != "" {
+		t2.resp = t.resp
+	}
 	return first
 }
 
 func (t *Task) handle(p Params) (err error) {
+	isErr := p[flag_error] != nil
 	rollback := p[flag_status] == flag_status_rollback
 	exit := p[flag_status] == flag_status_exit
 	if exit {
+		if p[flag_error] != nil {
+			return p[flag_error].(error)
+		}
 		return nil
 	}
-	if !rollback {
+	if rollback {
+		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
+		rerr := t.Backward(p)
+		t.PrintStatus(true, rerr)
+		return rerr
+	}
+	if isErr {
+		if t.check("Would you like to rollback") {
+			p[flag_status] = flag_status_rollback
+		} else {
+			p[flag_status] = flag_status_exit
+		}
+	}
+	if !isErr {
 		fmt.Printf("START task '%s'\n", t.Name)
 
 		err = ValidateParamConditions(p, t.Condition)
 		if err != nil {
 			fmt.Printf("VALIDATION FAIL:\n\tERROR: %v\n", err)
-			p[flag_status] = flag_status_rollback
-			p[flag_error] = err.Error()
+			p[flag_error] = err
 			return
 		}
 
 		err = t.Forward(p)
 		if err != nil {
-			rollback = true
-			p[flag_status] = flag_status_rollback
-			p[flag_error] = err.Error()
+			p[flag_error] = err
 		}
 		t.PrintStatus(false, err)
 	}
-	if rollback {
-		if !t.check("would you like to rollback") {
-			p[flag_status] = flag_status_exit
-			return
-		}
-		fmt.Printf("ROLLBACK - START task '%s'\n", t.Name)
-
-		rerr := t.Backward(p)
-		t.PrintStatus(true, rerr)
+	if p[flag_error] != nil {
+		return t.handle(p)
 	}
 	return
 }
@@ -115,9 +140,15 @@ func (t *Task) handle(p Params) (err error) {
 func (t *Task) check(msg string) bool {
 	fmt.Printf("%s (y/n)? ", msg)
 	var response string
-	_, err := fmt.Scanln(&response)
-	if err != nil || response == "" || len(response) < 1 {
-		return false
+	if t.resp != "" {
+		fmt.Printf("auto-response set -> '%s'\n", t.resp)
+		response = t.resp
+	} else {
+		_, err := fmt.Scanln(&response)
+		t.SetAutoResponse(response)
+		if err != nil || response == "" || len(response) < 1 {
+			return false
+		}
 	}
 	return strings.ToLower(response)[0] == 'y'
 }
@@ -137,7 +168,7 @@ func (t *Task) Exec(p Params) (err error) {
 			if p[flag_error] == nil {
 				return nil
 			} else {
-				return errors.New(p[flag_error].(string))
+				return p[flag_error].(error)
 			}
 		}
 	} else if t.NextTask != nil {

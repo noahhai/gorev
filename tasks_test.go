@@ -15,7 +15,7 @@ func TestExec(t *testing.T) {
 	task5 := NewTask("task5", Work(func(p Params) error { fmt.Println("doing work from task 5"); return errors.New("some error!") }), Work(func(p Params) error { fmt.Println("undoing work from task 5"); return nil }))
 
 	p := Params{}
-	err := task1.Then(task2).Then(task3).Then(task4).Then(task5).Exec(p)
+	err := task1.SetAutoResponse("y").Then(task2).Then(task3).Then(task4).Then(task5).Exec(p)
 	if err == nil {
 		t.Error("unexpected: error was nil")
 	}
@@ -29,7 +29,7 @@ func TestRollback(t *testing.T) {
 	task5 := NewTask("task5", Work(func(p Params) error { fmt.Println("doing work from task 5"); return errors.New("some error!") }), Work(func(p Params) error { fmt.Println("undoing work from task 5"); return nil }))
 
 	p := Params{}
-	tasks := task1.Then(task2).Then(task3).Then(task4).Then(task5)
+	tasks := task1.Then(task2).Then(task3).Then(task4).Then(task5).SetAutoResponse("y")
 	err := tasks.Rollback(p)
 	if err != nil {
 		t.Error("unexpected: rollback error was not not nil", err)
